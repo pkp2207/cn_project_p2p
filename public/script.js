@@ -93,6 +93,11 @@ muteButton.addEventListener('click', () => {
 // Pause/resume video
 pauseButton.addEventListener('click', () => {
   isPaused = !isPaused;
-  myVideo.pause();
-  pauseButton.innerText = isPaused ? 'Resume' : 'Pause';
+  if (isPaused) {
+    myVideo.pause();
+    pauseButton.innerText = 'Resume';
+  } else {
+    myVideo.play();
+    pauseButton.innerText = 'Pause';
+  }
 });
