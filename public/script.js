@@ -1,5 +1,9 @@
+console.log(NAME);
+let str = NAME.toString();
 const socket = io('/');
 const videoGrid = document.getElementById('video-grid');
+const viderid = document.getElementById('nameesss');
+
 const myPeer = new Peer(undefined, {
   // host: '/',
   // port: '3001'
@@ -7,8 +11,6 @@ const myPeer = new Peer(undefined, {
 const myVideo = document.createElement('video');
 myVideo.muted = true;
 const peers = {};
-const chatMessages = document.getElementById('chatMessages');
-const chatInput = document.getElementById('chatInput');
 const sendButton = document.getElementById('sendButton');
 const muteButton = document.getElementById('muteButton');
 const pauseButton = document.getElementById('pauseButton');
@@ -17,35 +19,30 @@ let isPaused = false;
 
 navigator.mediaDevices.getUserMedia({
   video: true,
-  audio: true
+  audio: true,
+  str: true,
 }).then(stream => {
   addVideoStream(myVideo, stream);
 
-  myPeer.on('call', call => {
+  myPeer.on('call', async call => {
     call.answer(stream);
     const video = document.createElement('video');
+
     call.on('stream', userVideoStream => {
       addVideoStream(video, userVideoStream);
+      let p = document.createElement('p');
+      p.innerText = str;
+      console.log(p.innerText);
+      videoGrid.append(p);
     });
   });
 
-  socket.on('user-connected', userId => {
-    connectToNewUser(userId, stream);
+  socket.on('user-connected', (userId, NAME) => {
+    connectToNewUser(userId, stream, NAME);
   });
 
   // Chat functionality
-  sendButton.addEventListener('click', () => {
-    const message = chatInput.value;
-    if (message.trim() !== '') {
-      appendMessage('You', message);
-      socket.emit('chat-message', message);
-      chatInput.value = '';
-    }
-  });
 
-  socket.on('chat-message', ({ sender, message }) => {
-    appendMessage(sender, message);
-  });
 });
 
 socket.on('user-disconnected', userId => {
@@ -53,14 +50,17 @@ socket.on('user-disconnected', userId => {
 });
 
 myPeer.on('open', id => {
-  socket.emit('join-room', ROOM_ID, id);
+  socket.emit('join-room', ROOM_ID, id, NAME);
 });
 
-function connectToNewUser(userId, stream) {
+function connectToNewUser(userId, stream, NAME) {
   const call = myPeer.call(userId, stream);
   const video = document.createElement('video');
   call.on('stream', userVideoStream => {
     addVideoStream(video, userVideoStream);
+    let p = document.createElement('p');
+    p.innerText = NAME;
+    videoGrid.append(p);
   });
   call.on('close', () => {
     video.remove();
@@ -71,23 +71,23 @@ function connectToNewUser(userId, stream) {
 
 function addVideoStream(video, stream) {
   video.srcObject = stream;
+
   video.addEventListener('loadedmetadata', () => {
     video.play();
   });
   videoGrid.append(video);
+
 }
 
-function appendMessage(sender, message) {
-  const messageElement = document.createElement('div');
-  messageElement.innerText = `${sender}: ${message}`;
-  chatMessages.append(messageElement);
-}
+
+
 
 // Mute/unmute audio
 muteButton.addEventListener('click', () => {
   isMuted = !isMuted;
   myVideo.muted = isMuted;
   muteButton.innerText = isMuted ? 'Unmute' : 'Mute';
+  socket.emit('toggle-mute', isMuted); // Emit mute status change
 });
 
 // Pause/resume video
@@ -100,4 +100,5 @@ pauseButton.addEventListener('click', () => {
     myVideo.play();
     pauseButton.innerText = 'Pause';
   }
+  socket.emit('toggle-pause', isPaused); // Emit pause status change
 });
